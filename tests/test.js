@@ -166,8 +166,8 @@ describe("Sales Cloud Corporate Account API", () => {
                 'Accept': 'application/json'
             };
             console.log(config.SalesUser);
-            console.log(config.c4c);
-            const response = await chai.request(config.c4c)
+            console.log(config.SalesCloud);
+            const response = await chai.request(config.SalesCloud)
                 .get(`/CorporateAccountCollection?$filter=ExternalID eq '${businessPartnerId}'`)
                 .set(req_headers);
 
