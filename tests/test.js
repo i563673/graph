@@ -165,12 +165,12 @@ describe("Sales Cloud Corporate Account API", () => {
                 'Authorization': `Basic ${encodedAuth}`,
                 'Accept': 'application/json'
             };
-
+            console.log(config.SalesUser);
+            console.log(config.c4c);
             const response = await chai.request(config.c4c)
                 .get(`/CorporateAccountCollection?$filter=ExternalID eq '${businessPartnerId}'`)
                 .set(req_headers);
-            console.log(config.SalesUser);
-            console.log(config.c4c);
+
 
             response.should.have.status(200);
             response.body.d.results.should.be.an('array').with.length.above(0);
