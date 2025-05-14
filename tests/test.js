@@ -54,7 +54,7 @@ describe("S/4HANA OData - CSRF Token Fetch", () => {
         response.header.should.have.property('x-csrf-token');
         // ✅ Save CSRF token to global variable
         csrfToken = response.header['x-csrf-token'];
-        cookies = csrfFetchResponse.header['set-cookie'].map(cookie => cookie.split(';')[0]).join('; ');
+        cookies = response.header['set-cookie'].map(cookie => cookie.split(';')[0]).join('; ');
         console.log("Fetched CSRF Token:", csrfToken);
     });
 });
