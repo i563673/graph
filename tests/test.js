@@ -29,6 +29,7 @@ describe("S/4HANA Business Partner API", () => {
                 .set(req_headers);
             response.should.have.status(200);
             response.body.should.be.a('object');
+            console.log(response.body);
         });
     });
 });
