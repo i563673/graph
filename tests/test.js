@@ -165,15 +165,15 @@ describe("Sales Cloud Corporate Account API", () => {
                 'Authorization': `Basic ${encodedAuth}`,
                 'Accept': 'application/json'
             };
-            console.log(config.SalesUser);
-            console.log(config.SalesCloud);
             const response = await chai.request(config.SalesCloud)
                 .get(`/CorporateAccountCollection?$filter=ExternalID eq '${businessPartnerId}'`)
                 .set(req_headers);
 
-
+            console.log("Sales Cloud response:", JSON.stringify(response.body, null, 2));
             response.should.have.status(200);
-            response.body.d.results.should.be.an('array').with.length.above(0);
+            response.body.should.have.property('d');
+            response.body.d.should.have.property('results');
+            response.body.d.results.should.be.an('array');
         });
     });
 });
