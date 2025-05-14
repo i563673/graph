@@ -38,6 +38,7 @@ describe("S/4HANA Business Partner API", () => {
 
 let csrfToken = '';
 let businessPartnerId = '';
+let cookies = '';
 
 describe("S/4HANA OData - CSRF Token Fetch", () => {
     it("should fetch a CSRF token using Basic Auth", async () => {
@@ -53,6 +54,7 @@ describe("S/4HANA OData - CSRF Token Fetch", () => {
         response.header.should.have.property('x-csrf-token');
         // ✅ Save CSRF token to global variable
         csrfToken = response.header['x-csrf-token'];
+        cookies = csrfFetchResponse.header['set-cookie'].map(cookie => cookie.split(';')[0]).join('; ');
         console.log("Fetched CSRF Token:", csrfToken);
     });
 });
@@ -66,7 +68,8 @@ describe("S/4HANA OData - Create Business Partner", () => {
             'x-csrf-token': csrfToken, // Use the fetched CSRF token
             'Authorization': `Basic ${encodedAuth}`,
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Cookie': cookies
         };
         const requestBody = {
             "BusinessPartnerCategory": "1",
