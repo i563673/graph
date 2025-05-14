@@ -20,7 +20,9 @@ describe("S/4HANA Business Partner API", () => {
         it("should fetch Business Partner with ID 1001601", async () => {
             const encodedAuth = Buffer.from(`${config.s4cuser}:${config.s4cpass}`).toString('base64');
             const req_headers = {
-                'Authorization': `Basic ${encodedAuth}`
+                'Authorization': `Basic ${encodedAuth}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             };
             const response = await chai.request(config.s4c)
                 .get(`/A_BusinessPartner('1001601')`)
