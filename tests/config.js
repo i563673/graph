@@ -17,8 +17,8 @@ module.exports = {
         "grant_type": "password",
         "client_id": vcap.xsuaa[0].credentials.clientid,
         "client_secret": vcap.xsuaa[0].credentials.clientsecret,
-        "username": cred.pusername,
-        "password": cred.puserpwd
+        "username": cred.USERNAME,
+        "password": cred.PASSWORD
 
     },
     s4c:  "https://my304263.s4hana.ondemand.com/sap/opu/odata/sap/API_BUSINESS_PARTNER",
