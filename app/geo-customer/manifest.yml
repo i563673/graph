@@ -1,0 +1,13 @@
+---
+applications:
+- name: geo-customer-ui
+  path: .
+  memory: 128M
+  buildpack: nodejs_buildpack
+  env:
+    destinations: >
+      [
+        {"name": "srv-binding", "url":"https://<service-url>", "forwardAuthToken": true}
+      ]
+  services:
+  - georel-graph-uaa

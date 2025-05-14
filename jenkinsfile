@@ -1,0 +1,225 @@
+#!/usr/bin/env groovy
+@Library(['piper-lib', 'piper-lib-os', 'lmit-jenkins-lib']) _
+
+try {
+node("master"){
+
+	dockerExecuteOnKubernetes(script: this, dockerEnvVars: ['pusername':pusername, 'puserpwd':puserpwd], dockerImage: 'engsrvval.int.repositories.cloud.sap/e2etestval:latest' ) 
+    {
+
+		stage ('Build') { 
+			deleteDir()
+      		checkout scm
+        withCredentials([usernamePassword(credentialsId: "i563673_github", passwordVariable: 'password', usernameVariable: 'username')]) {
+                    sh "rm -rf *"
+        checkout scm
+                    sh'''
+            git clone --single-branch --branch "main" "https://github.com/SAP-samples/cloud-extension-graph-sample.git"  
+                        mv ./cloud-extension-graph-sample/* ./ 
+                        
+                    '''	 
+	 		sh '''
+			    
+			    npm rm -g @sap/cds
+			    npm i -g @sap/cds-dk
+			'''
+            sh '''
+                cd logistics-partner
+                npm i
+                mbt build
+                
+            '''
+
+            
+			
+	  	}
+        }
+    
+
+	
+		stage('Deplpy-app logistics'){
+
+			setupCommonPipelineEnvironment script:this
+            cloudFoundryDeploy script:this, deployTool:'mtaDeployPlugin'
+        }
+
+        stage('Create BTP destinations'){
+		
+             destMap = getServicekey(
+                btpCredentialsId:'pusercf2',
+                btpRegion:'eu10',
+		btpRegionForCFEnv:'eu10-004', 
+                orgName:'"SAP Graph Consumers_graph-mission-validation-1xdb3fwt"',                   
+                spaceName:'dev',
+                serviceInstanceName: 'dest',
+                serviceKeyName: 'dest-key'
+            )
+                def result = sh([ 
+                    script: """curl -s POST -u '${destMap.credentials.clientid}':'${destMap.credentials.clientsecret}' -d grant_type=client_credentials ${destMap.credentials.url}/oauth/token -o json""", 
+                    returnStdout: true 
+                ])
+                def resultInText = readJSON text: result
+                def access_token = resultInText['access_token'].trim()
+		setupCommonPipelineEnvironment script:this
+                withCredentials([usernamePassword(credentialsId: 'pusercf2', passwordVariable: 'pass', usernameVariable: 'user')]) {
+                    sh "cf login -a ${commonPipelineEnvironment.configuration.steps.cloudFoundryDeploy.cloudFoundry.apiEndpoint} -u $user -p $pass -o '${commonPipelineEnvironment.configuration.steps.cloudFoundryDeploy.cloudFoundry.org}' -s ${commonPipelineEnvironment.configuration.steps.cloudFoundryDeploy.cloudFoundry.space}"
+                }                
+                sh '''             
+                    cf apps >ab.txt
+                    cat ab.txt
+                '''
+                def logistics = sh([ 
+                    script: """grep '^logistics-partner-srv' ab.txt | awk '{print \$NF}'""",
+                    returnStdout: true 
+                ]).trim()
+                def logisticsURL="https://${logistics}/odata/v4/logistics"                 
+                sh([ 
+                    script: """curl --location --request POST ${destMap.credentials.uri}/destination-configuration/v1/subaccountDestinations --header "Authorization: bearer ${access_token}" --header 'Content-Type: application/json' --data-raw '{"Name": "logistics-partner","Type": "HTTP","URL": "${logisticsURL}"}'""", 
+                    returnStdout: true 
+                ])
+
+            cloudFoundryCreateService(
+                cfApiEndpoint:'https://api.cf.eu10-004.hana.ondemand.com',
+                cfOrg:'SAP Graph Consumers_graph-mission-validation-1xdb3fwt',
+                cfSpace:'dev',
+                cfCredentialsId: "pusercf2",
+                cfService: 'sap-graph',
+                cfServiceInstanceName: 'graph',
+                cfServicePlan: 'api',
+                script: this
+            )
+            cloudFoundryCreateServiceKey(
+                cfApiEndpoint:'https://api.cf.eu10-004.hana.ondemand.com',
+                cfOrg:'SAP Graph Consumers_graph-mission-validation-1xdb3fwt',
+                cfSpace:'dev',
+                cfCredentialsId: "pusercf2",
+                cfServiceInstance: 'graph',
+                cfServiceKeyName: 'graph-key',
+                script: this
+            )
+            graphMap = getServicekey(
+                btpCredentialsId:'pusercf2',
+                orgName:'"SAP Graph Consumers_graph-mission-validation-1xdb3fwt"',
+                btpRegion:'eu10',
+		btpRegionForCFEnv:'eu10-004',
+                spaceName:'dev',
+                serviceInstanceName: 'graph',
+                serviceKeyName: 'graph-key'
+            )
+               // sh '''            
+                //     cf service-key graph graph-key >key.txt
+                //     cat key.txt
+                // '''
+                // def jsonText = readFile('key.txt')
+                // def graphMap = readJSON text: jsonText
+                // def clientId     = graphMap.credentials.uaa.clientid
+                // def clientSecret = graphMap.credentials.uaa.clientsecret
+                // def tokenURL     = graphMap.credentials.uaa.url
+                // def graphURI     = graphMap.credentials.uri
+                // clientid=$(grep '"clientid"' key.txt | head -1 | cut -d '"' -f4)
+                // clientsecret=$(grep '"clientsecret"' key.txt | head -1 | cut -d '"' -f4)
+                // url=$(grep '"url"' key.txt | grep authentication | head -1 | cut -d '"' -f4)
+                // uri=$(grep '"uri"' key.txt | head -1 | cut -d '"' -f4)
+            //  def result = sh([ 
+            //         script: """curl -s POST -u '${destMap.credentials.clientid}':'${destMap.credentials.clientsecret}' -d grant_type=client_credentials ${destMap.credentials.url}/oauth/token -o json""", 
+            //         returnStdout: true 
+            //     ])
+            // def resultInText = readJSON text: result
+            // def access_token = resultInText['access_token'].trim()
+            
+            sh([ 
+                script: """curl --location --request POST ${destMap.credentials.uri}/destination-configuration/v1/subaccountDestinations --header "Authorization: bearer ${access_token}" --header 'Content-Type: application/json' --data-raw '{"Name": "graph-api","Type": "HTTP","URL": "${graphMap.credentials.uri}/v1","Authentication":"OAuth2JWTBearer","clientId":"${graphMap.credentials.uaa.clientid}" ,"clientSecret":"${graphMap.credentials.uaa.clientsecret}" ,"tokenServiceURLType":"Dedicated","tokenServiceURL":"${graphMap.credentials.uaa.url}/oauth/token"}'""", 
+                returnStdout: true 
+            ])
+            sh([ 
+                script: """curl --location --request POST ${destMap.credentials.uri}/destination-configuration/v1/subaccountDestinations --header "Authorization: bearer ${access_token}" --header 'Content-Type: application/json' --data-raw '{"Name": "graph-api-cc","Type": "HTTP","URL": "${graphMap.credentials.uri}/v1","Authentication":"OAuth2ClientCredential","clientId":"${graphMap.credentials.uaa.clientid}","clientSecret":"${graphMap.credentials.uaa.clientsecret}","tokenServiceURLType":"Dedicated","tokenServiceURL":"${graphMap.credentials.uaa.url}/oauth/token"}'""", 
+                returnStdout: true 
+            ])
+
+        }
+
+
+        stage('Deploy graph app'){
+            sh'''
+	    pwd
+            npm install @cap-js/sqlite -D
+     	    cd ..
+	    pwd
+            mbt build --source GeorelGraph -t ./
+	     '''
+            cloudFoundryDeploy script:this, deployTool:'mtaDeployPlugin', mtaPath: './georel-graph_2.0.0.mtar'
+       
+        }
+
+        // stage('Add graph role'){
+            
+            
+       
+        // }
+		
+
+		// stage('Integration Test'){			
+
+		// 		catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+		// 		withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId:'pusercf2', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+		// 			sh "cf login -a ${commonPipelineEnvironment.configuration.steps.cloudFoundryDeploy.cloudFoundry.apiEndpoint} -u $USERNAME -p $PASSWORD -o ${commonPipelineEnvironment.configuration.steps.cloudFoundryDeploy.cloudFoundry.org} -s ${commonPipelineEnvironment.configuration.steps.cloudFoundryDeploy.cloudFoundry.space}"
+		// 		}
+		// 		sh 'rm -rf **'
+		// 		checkout scm
+		// 		packageJson = readJSON file: 'package.json'
+		// 		packageJson.cds.requires.API_BUSINESS_PARTNER["[production]"].credentials.destination = "bupa-mock"
+		// 		writeJSON file: 'package.json', json: packageJson
+		// 		//sh "cf login -a https://api.cf.eu10-004.hana.ondemand.com -u sap-cf-e2etests@sap.com -p **********! -o EngSrvVal-E2E_risk-analytics-automation-1kqqv2wz -s s4"
+				
+		// 		sh '''
+		// 			cf bind-service mock-srv BusinessPartnerValidation-dest --binding-name mock-srv-dest
+		// 			cf bind-service mock-srv BusinessPartnerValidation-ems --binding-name mock-srv-ems
+		// 			cf restage mock-srv
+		// 		'''
+		// 		//sleep time: 60, unit: 'SECONDS'
+		// 		sh '''
+		// 			appId=`cf app BusinessPartnerValidation-srv --guid`
+		// 			pwd
+		// 			ls
+					
+		// 			`cf curl /v2/apps/$appId/env > tests/rest-api/testscripts/util/appEnv.json`
+		// 			npm install --only=dev
+		// 			npm run-script test:rest-api
+		// 		'''
+		// 	}
+	    // }
+	  
+ 
+	}
+
+	
+	
+
+
+		
+ 	   	// stage('Undeploy'){
+ 		// 	sh'''
+		// 		echo 'y' | cf install-plugin multiapps
+		//    		cf delete BusinessPartnerValidation-srv-mocks -f
+ 		//    		echo 'y' | cf undeploy BusinessPartnerValidation
+ 		//    	'''
+		// 	sh'''
+		// 	echo 'y' | cf install-plugin multiapps
+		// 	echo 'y' | cf undeploy BusinessPartnerValidation
+		// 	'''
+		 
+ 	    // } 
+	}
+    }
+
+
+	catch(e){
+		echo 'This will run only if failed'
+		currentBuild.result = "FAILURE"
+	}
+
+    finally{
+        emailext body: '$DEFAULT_CONTENT', subject: '$DEFAULT_SUBJECT', to: 'saumya.suman@sap.com'
+
+
+    }

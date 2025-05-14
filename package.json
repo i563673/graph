@@ -1,0 +1,125 @@
+{
+  "name": "georel-graph",
+  "version": "4.0.0",
+  "description": "Application for Customer GeoRelation Processing",
+  "repository": "<Add your repository here>",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@cap-js/hana": "^1.3.0",
+    "@sap-cloud-sdk/http-client": "^3.2.0",
+    "@sap-cloud-sdk/util": "^3.2.0",
+    "@sap/audit-logging": "^5.0.0",
+    "@sap/cds": "^8",
+    "@sap/xb-msg-amqp-v100": "^0.9.53",
+    "@sap/xssec": "^4",
+    "express": "^4",
+    "passport": "^0.4.1"
+  },
+  "devDependencies": {
+    "chai": "^4.3.4",
+    "chai-http": "^4.3.0",
+    "mocha": "^9.0.2",
+    "@cap-js/sqlite":"^1.0.1"
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "debug": "cds-serve --with-mocks --in-memory",
+    "watch-geo-customer": "cds watch --open geo-customer/webapp/index.html#fe-lrop-v4",
+    "test:integration": "mocha tests/test.js --timeout 360000 --exit"
+  },
+  "cds": {
+    "--log": {
+      "levels": {
+        "remote": "debug"
+      }
+    },
+    "requires": {
+      "messaging": {
+        "kind": "local-messaging",
+        "[production]": {
+          "kind": "enterprise-messaging-shared",
+          "queue": {
+            "name": "sap/geograph/1/georel-graph-srv/1234"
+          },
+          "amqp": {
+            "incomingSessionWindow": 30
+          },
+          "format": "cloudevents"
+        },
+        "[hybrid]": {
+          "kind": "enterprise-messaging-shared",
+          "queue": {
+            "name": "sap/geograph/1/georel-graph-srv/1234"
+          },
+          "amqp": {
+            "incomingSessionWindow": 30
+          },
+          "format": "cloudevents"
+        }
+      },
+      "db": {
+        "kind": "sql",
+        "--credentials": {
+          "database": "geo.db"
+        }
+      },
+      "uaa": {
+        "kind": "xsuaa"
+      },
+      "auth": {
+        "kind": "dummy-auth"
+      },
+      "[production]": {
+        "auth": {
+          "kind": "jwt-auth"
+        }
+      },
+      "GRAPH_CC": {
+        "kind": "odata",
+        "credentials": {
+          "path": "/sap.s4",
+          "destination": "graph-api-cc"
+        }
+      },
+      "sap.s4": {
+        "kind": "odata",
+        "model": "srv/external/sap.s4",
+        "credentials": {
+          "path": "/sap.s4",
+          "destination": "graph-api-cc"
+        }
+      },
+      "sap.graph": {
+        "kind": "odata",
+        "model": "srv/external/sap.graph",
+        "credentials": {
+          "path": "/sap.graph",
+          "destination": "graph-api"
+        }
+      },
+      "sap.c4c": {
+        "kind": "odata",
+        "model": "srv/external/sap.c4c",
+        "credentials": {
+          "path": "/sap.c4c",
+          "destination": "graph-api-cc"
+        }
+      },
+      "custom.ns": {
+        "kind": "odata",
+        "model": "srv/external/custom.ns",
+        "credentials": {
+          "path": "/custom.ns",
+          "destination": "graph-api-cc"
+        }
+      }
+    },
+    "hana": {
+      "deploy-format": "hdbtable"
+    }
+  },
+  "sapux": [
+    "app/geo-customer"
+  ]
+}

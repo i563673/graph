@@ -1,0 +1,52 @@
+{
+    "xsappname": "geoInfo",
+    "tenant-mode": "dedicated",
+    "description": "Security profile of geoInfo",
+    "scopes": [
+      {
+        "name": "uaa.user",
+        "description": "UAA"
+      },
+      {
+        "name": "$XSAPPNAME.Display",
+        "description": "display"
+      },
+      {
+        "name":"$XSAPPNAME.GeorelViewer",
+        "description": "georel"
+      }
+    ],
+    "attributes": [
+      {
+        "name": "Country",
+        "description": "Country",
+        "valueType": "s"
+      }
+    ],
+    "role-templates": [
+      {
+        "name": "Token_Exchange",
+        "description": "UAA",
+        "scope-references": ["uaa.user"]
+      },
+      {
+        "name": "GeorelViewer",
+        "description": "GeorelViewer",
+        "scope-references": ["$XSAPPNAME.GeorelViewer"]
+      },
+      {
+        "name": "Viewer",
+        "description": "View all",
+        "scope-references": ["$XSAPPNAME.Display","$XSAPPNAME.GeorelViewer"],
+        "attribute-references": [{"name":"Country",
+                                "default-values":"DE"
+      }]
+      }
+    ],
+    "oauth2-configuration": {
+        "redirect-uris": [
+        "https://*.eu10-004.hana.ondemand.com/**",
+        "https://*.eu10.hana.ondemand.com/**"
+        ]
+        }
+  }

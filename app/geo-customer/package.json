@@ -1,0 +1,12 @@
+{
+        "name": "geo-customer",
+        "version": "4.0.0",
+        "description": "",
+        "scripts": {
+                "start": "node node_modules/@sap/approuter/approuter.js"
+        },
+        "license": "ISC",
+        "dependencies": {
+                "@sap/approuter": "^14.4.3"
+        }
+}
