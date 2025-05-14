@@ -97,11 +97,11 @@ describe("S/4HANA OData - Create Business Partner", () => {
             .post('/A_BusinessPartner')
             .set(req_headers)
             .send(requestBody);
+        console.log(csrfToken);
         response.should.have.status(201); // Check for successful creation (201)       
         // Extract the BusinessPartner ID from the response
         businessPartnerId = response.body.d.BusinessPartner; 
         console.log("Created Business Partner ID:", businessPartnerId);
-        console.log(csrfToken);
     });
 });
 
