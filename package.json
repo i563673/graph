@@ -26,7 +26,7 @@
     "start": "cds-serve",
     "debug": "cds-serve --with-mocks --in-memory",
     "watch-geo-customer": "cds watch --open geo-customer/webapp/index.html#fe-lrop-v4",
-    "test:integration": "mocha tests/test.js --timeout 360000 --exit"
+    "test": "mocha tests/test.js --timeout 360000 --exit"
   },
   "cds": {
     "--log": {
