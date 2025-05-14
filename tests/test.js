@@ -101,6 +101,7 @@ describe("S/4HANA OData - Create Business Partner", () => {
         // Extract the BusinessPartner ID from the response
         businessPartnerId = response.body.d.BusinessPartner; 
         console.log("Created Business Partner ID:", businessPartnerId);
+        console.log(csrfToken);
     });
 });
 
